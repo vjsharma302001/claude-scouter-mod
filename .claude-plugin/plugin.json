@@ -1,0 +1,6 @@
+{
+  "name": "scouter",
+  "version": "0.1.0",
+  "description": "Anime scouter: context power-level with a 60% breach alert, live subagents, and the session id",
+  "types": "./types/index.d.ts"
+}

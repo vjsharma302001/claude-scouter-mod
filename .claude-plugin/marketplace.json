@@ -1,0 +1,11 @@
+{
+  "name": "vj-mods",
+  "owner": { "name": "VJ" },
+  "plugins": [
+    {
+      "name": "scouter",
+      "source": "./",
+      "description": "Attack on Titan context panel: breach meter with a 60% wall-breach alert, live subagents, and the session id"
+    }
+  ]
+}
