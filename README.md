@@ -7,6 +7,22 @@ An Attack on Titan context panel for [Claude Code](https://claude.com/claude-cod
 - **Tasks running** — background shells, monitors and workflows, each stoppable from the panel.
 - **Session id** — always visible for copy/paste.
 
+## Screenshots
+
+Calm session, wall intact:
+
+![Scouter panel at 8% context](docs/scouter-calm.png)
+
+Breach — context past 50%, `WALL MARIA BREACHED`:
+
+![Scouter panel breached at 57% context](docs/scouter-breach.png)
+
+Docked, expanded:
+
+![Scouter panel docked](docs/scouter-panel.png)
+
+<sub>Session ids in the screenshots are dummy placeholders.</sub>
+
 ## Install
 
 It's a Claude Code plugin served from its own marketplace. Add the marketplace and install:
