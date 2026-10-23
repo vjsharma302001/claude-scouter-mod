@@ -5,7 +5,7 @@
     {
       "name": "scouter",
       "source": "./",
-      "description": "Attack on Titan context panel: breach meter with a 60% wall-breach alert, live subagents, and the session id"
+      "description": "Attack on Titan context panel: breach meter with a 50% wall-breach alert, live subagents, and the session id"
     }
   ]
 }
