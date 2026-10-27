@@ -17,6 +17,12 @@ export type TaskRow = {
   label: string
 }
 
+// A past session's recon log for the current folder: its id and ai-title.
+export type SessionRow = {
+  sid: string
+  title: string
+}
+
 declare module 'claude-code' {
   interface PluginState {
     scouter: {
@@ -24,6 +30,7 @@ declare module 'claude-code' {
       tasks: Record<string, TaskRow>
       tick: number
       breached: boolean
+      recent: SessionRow[]
     }
   }
 }

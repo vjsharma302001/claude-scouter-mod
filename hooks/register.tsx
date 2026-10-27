@@ -1,6 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
-import type { AgentStat, TaskRow } from '../types'
+import type { AgentStat, TaskRow, SessionRow } from '../types'
 
 const PANE = 'scouter'
 const SWEET_SPOT = 50
@@ -9,6 +9,32 @@ const agents = atom({ plugin: 'scouter', key: 'agents' } as const, {} as Record<
 const tasks = atom({ plugin: 'scouter', key: 'tasks' } as const, {} as Record<string, TaskRow>)
 const tick = atom({ plugin: 'scouter', key: 'tick' } as const, 0)
 const breached = atom({ plugin: 'scouter', key: 'breached' } as const, false)
+const recent = atom({ plugin: 'scouter', key: 'recent' } as const, [] as SessionRow[])
+
+// Last 5 sessions for the folder Claude was triggered in. Transcripts live under
+// ~/.claude/projects/<cwd, every non-alphanumeric char replaced by '-'>/*.jsonl,
+// newest first; the title is the latest `ai-title` record. Shelled out because a
+// transcript can exceed $.fs.read's 4 MiB cap; std tools only, so no runtime dep.
+const loadRecent = async ($: any) => {
+  try {
+    const cwd = await $.session.cwd()
+    const cur = await $.session.id()
+    const script = `
+proj="$HOME/.claude/projects/$(printf %s "$1" | sed 's#[^a-zA-Z0-9]#-#g')"
+[ -d "$proj" ] || exit 0
+ls -t "$proj"/*.jsonl 2>/dev/null | head -8 | while IFS= read -r f; do
+  sid=$(basename "$f" .jsonl)
+  t=$(grep '"type":"ai-title"' "$f" 2>/dev/null | tail -1 | sed -E 's/.*"aiTitle":"([^"]*)".*/\\1/')
+  printf '%s\\t%s\\n' "$sid" "$t"
+done`
+    const { stdout } = await $.process.run(['bash', '-c', script, 'bash', cwd])
+    const rows: SessionRow[] = String(stdout).split('\n').map(l => l.trimEnd()).filter(Boolean)
+      .map(l => { const i = l.indexOf('\t'); return { sid: i < 0 ? l : l.slice(0, i), title: i < 0 ? '' : l.slice(i + 1) } })
+      .filter(r => r.sid && r.sid !== cur)
+      .slice(0, 5)
+    await update($, recent, () => rows)
+  } catch {}
+}
 
 // ponytail: approximate per-MTok USD prices; bump if Anthropic pricing moves.
 const PRICES: Record<string, { in: number; out: number; cacheR: number; cacheW: number }> = {
@@ -84,6 +110,7 @@ const render = async ($: any, e: any) => {
   const pct = context.percent ?? 0
   const stats = await read($, agents)
   const taskMap = await read($, tasks)
+  const recentRows = await read($, recent)
   const now = Date.now()
   const live = (await $.agent.list()).filter((a: any) =>
     a.status === 'running' || a.status === 'pending' || a.status === 'waiting')
@@ -117,6 +144,14 @@ const render = async ($: any, e: any) => {
 
       <Box marginTop={1}>
         <Text><Text color="cyan">session  </Text><Text dimColor>{sid}</Text></Text>
+      </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text color="green">── recon logs · last 5 here ──</Text>
+        {recentRows.length === 0 && <Text dimColor>  no prior logs</Text>}
+        {recentRows.map((r: SessionRow) => (
+          <Text key={r.sid}>  <Text color="cyan">{r.sid.slice(0, 8)}</Text>  <Text dimColor>{clip(r.title || '(untitled)', 40)}</Text></Text>
+        ))}
       </Box>
 
       <Box marginTop={1} flexDirection="column">
@@ -158,6 +193,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'scouter', description: 'Toggle the Scouter context/agent panel' })
     void $.ui.open({ id: PANE, title: 'SCOUTER' })
+    void loadRecent($)
     $.clock.every(1000, async () => {
       try {
         await update($, tick, n => (n + 1) % 1_000_000)

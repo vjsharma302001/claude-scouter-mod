@@ -5,6 +5,7 @@ An Attack on Titan context panel for [Claude Code](https://claude.com/claude-cod
 - **Breach meter** — your context window as a power-level bar. It flips red and fires a toast + sound the moment usage crosses the threshold, so you hand off or wrap the session before you run out of room.
 - **Scouts deployed** — live subagents with their model, turn count, elapsed time and running cost estimate. `✕ recall` stops one.
 - **Tasks running** — background shells, monitors and workflows, each stoppable from the panel.
+- **Recon logs** — the last 5 sessions (title + short id) for the folder Claude was launched in, so you can find and resume where you left off.
 - **Session id** — always visible for copy/paste.
 
 ## Screenshots
