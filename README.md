@@ -3,6 +3,7 @@
 An Attack on Titan context panel for [Claude Code](https://claude.com/claude-code), shown as a dock pane beside the chat.
 
 - **Breach meter** — your context window as a power-level bar. It flips red and fires a toast + sound the moment usage crosses the threshold, so you hand off or wrap the session before you run out of room.
+- **Terrain** — the `/context` breakdown, always on: what actually fills the window, row by row (messages, system tools, MCP tools, skills, memory files), heaviest first, with free space and the compaction buffer beneath. Deferred tool schemas are listed too, marked `—`, since they sit outside the window and don't count toward the total.
 - **Scouts deployed** — live subagents with their model, turn count, elapsed time and running cost estimate. `✕ recall` stops one.
 - **Tasks running** — background shells, monitors and workflows, each stoppable from the panel.
 - **Recon logs** — the last 5 sessions (title + short id) for the folder Claude was launched in, so you can find and resume where you left off.

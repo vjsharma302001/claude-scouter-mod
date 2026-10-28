@@ -67,6 +67,13 @@ const fmtDur = (ms: number) => {
 }
 const shortModel = (m: string) => m.replace(/^claude-/, '').replace(/-\d{6,8}$/, '')
 
+// --- context breakdown (the rows /context prints) -------------------------
+// Matches how /context prints a count: one decimal, a trailing ".0" dropped.
+const fmtTok = (n: number) =>
+  n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n)
+const pad = (s: string, n: number) => (s.length >= n ? s.slice(0, n) : s + ' '.repeat(n - s.length))
+const lpad = (s: string, n: number) => (s.length >= n ? s : ' '.repeat(n - s.length) + s)
+
 // --- background tasks (shells / monitors / workflows / subagents) ---------
 const TERMINAL = new Set(['completed', 'failed', 'done', 'stopped', 'cancelled', 'canceled', 'deleted', 'error'])
 const isLive = (status: string | undefined) => !TERMINAL.has((status ?? '').toLowerCase())
@@ -106,8 +113,17 @@ const render = async ($: any, e: any) => {
   const { Box, Text, Button } = $.ui.resolve(e)
   await read($, tick) // subscribe to the 1s heartbeat so elapsed/context redraw
   const sid = await $.session.id()
-  const { context, cost } = await $.session.usage()
+  // `summary` estimates locally and sends no token-count requests, so it is safe
+  // on the 1s redraw; `full` would fire one request per tool and per memory file.
+  const { context, cost } = await $.session.usage({ breakdown: 'summary' })
   const pct = context.percent ?? 0
+  const bd = context.breakdown
+  const rows = (bd?.categories ?? []).filter((c: any) => c.tokens > 0)
+  const used = rows.filter((c: any) => c.kind === 'used').sort((a: any, b: any) => b.tokens - a.tokens)
+  const spare = rows.filter((c: any) => c.kind === 'free' || c.kind === 'buffer')
+  const deferred = rows.filter((c: any) => c.kind === 'deferred')
+  const windowTok = bd?.rawMaxTokens ?? context.window ?? 0
+  const share = (t: number) => (windowTok > 0 ? `${((t / windowTok) * 100).toFixed(1)}%` : '—')
   const stats = await read($, agents)
   const taskMap = await read($, tasks)
   const recentRows = await read($, recent)
@@ -141,6 +157,29 @@ const render = async ($: any, e: any) => {
           <Text color="red" bold>⚔ {wallName(pct)} BREACHED — fall back or hand off</Text>
         </Box>
       )}
+
+      <Box marginTop={1} flexDirection="column">
+        <Text color="green">── terrain · what fills the walls ──</Text>
+        {used.length === 0 && <Text dimColor>  no reading</Text>}
+        {used.map((c: any) => (
+          <Text key={c.name}>
+            <Text color={c.color}>■ </Text>
+            <Text>{pad(c.name, 22)}</Text>
+            <Text dimColor>{lpad(fmtTok(c.tokens), 7)}  </Text>
+            <Text>{lpad(share(c.tokens), 6)}</Text>
+          </Text>
+        ))}
+        {spare.map((c: any) => (
+          <Text key={c.name} dimColor>
+            {'  '}{pad(c.name, 22)}{lpad(fmtTok(c.tokens), 7)}  {lpad(share(c.tokens), 6)}
+          </Text>
+        ))}
+        {deferred.map((c: any) => (
+          <Text key={c.name} dimColor>
+            {'  '}{pad(`${c.name} (deferred)`, 22)}{lpad(fmtTok(c.tokens), 7)}  {lpad('—', 6)}
+          </Text>
+        ))}
+      </Box>
 
       <Box marginTop={1}>
         <Text><Text color="cyan">session  </Text><Text dimColor>{sid}</Text></Text>
